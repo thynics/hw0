@@ -20,7 +20,7 @@ def add(x, y):
         Sum of x + y
     """
     ### BEGIN YOUR CODE
-    pass
+    return x + y
     ### END YOUR CODE
 
 
@@ -48,7 +48,12 @@ def parse_mnist(image_filename, label_filename):
                 for MNIST will contain the values 0-9.
     """
     ### BEGIN YOUR CODE
-    pass
+    with gzip.open(image_filename, "rb") as f:
+        X = np.frombuffer(f.read(), np.uint8, offset=16).reshape(-1, 784).astype('float32') / 255
+    with gzip.open(label_filename, "rb") as f:
+        y = np.frombuffer(f.read(), np.uint8, offset=8)
+
+    return X, y
     ### END YOUR CODE
 
 
@@ -68,9 +73,12 @@ def softmax_loss(Z, y):
         Average softmax loss over the sample.
     """
     ### BEGIN YOUR CODE
-    pass
+    return np.mean(np.log(np.sum(np.exp(Z), axis=1)) - Z[np.arange(len(Z)),y])
     ### END YOUR CODE
 
+
+def normalize(X):
+    return X / np.sum(X, axis=1, keepdims=True)
 
 def softmax_regression_epoch(X, y, theta, lr = 0.1, batch=100):
     """ Run a single epoch of SGD for softmax regression on the data, using
@@ -91,7 +99,20 @@ def softmax_regression_epoch(X, y, theta, lr = 0.1, batch=100):
         None
     """
     ### BEGIN YOUR CODE
-    pass
+    n = X.shape[0]
+    step = n // batch
+    index = np.arange(batch)
+    for i in range(step + 1):
+        start = i * batch
+        end = min(start + batch, n)
+        if start == end:
+            break
+        x1 = X[start: end]
+        y1 = y[start: end]
+        z = normalize(np.exp(x1@theta))
+        z[index, y1] -= 1
+        grad = np.matmul(x1.transpose(), z) / batch
+        theta -= lr * grad
     ### END YOUR CODE
 
 
@@ -118,7 +139,30 @@ def nn_epoch(X, y, W1, W2, lr = 0.1, batch=100):
         None
     """
     ### BEGIN YOUR CODE
-    pass
+    n = X.shape[0]
+    step = n // batch
+    index = np.arange(batch)
+    for i in range(step + 1):
+        start = i * batch
+        end = min(start + batch, n)
+        if start == end:
+            break
+        x1 = X[start: end]
+        y1 = y[start: end]
+        # ReLU
+        Z1 = np.matmul(x1, W1)
+        Z1[Z1 < 0] = 0
+        # G2
+        G2 = normalize(np.exp(Z1@W2))
+        G2[index, y1] -= 1
+        # G1
+        G1 = np.matmul(G2, W2.transpose())
+        G1[Z1 <= 0] = 0
+        # grad
+        W1_grad = np.matmul(x1.transpose(), G1) / batch
+        W2_grad = np.matmul(Z1.transpose(), G2) / batch
+        W1 -= lr * W1_grad
+        W2 -= lr * W2_grad
     ### END YOUR CODE
 
 
